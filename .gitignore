@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.env/
+
+# IDEs
+.vscode/
+.idea/
+
+# Zeus Engine Logs & Temps
+*.log
+/tmp/
+/scripts/easyway_for_ubuntu/ # Solo si quieres mantener el submodule o repo separado
+
+# Flet / Flutter
+build/
+dist/
+
+# System
+.DS_Store
+Thumbs.db
