@@ -1,6 +1,7 @@
 # Zeus Plugin: Huananzhi Fan Fix (X99) - Native Python Edition
 # ---------------------------------------------------------
 # Ported from legacy install_huananzhi_fan_fix.sh by Iván Masías
+# Refined for safety and robust GRUB parsing
 # ---------------------------------------------------------
 import os
 import subprocess
@@ -8,10 +9,10 @@ import shutil
 
 MANIFEST = {
     "name": "Huananzhi Fan Fix (Nativo)",
-    "description": "Habilita el control de ventiladores en placas HUANANZHI X99 (Chip Nuvoton). Modifica GRUB y configura el módulo nct6775.",
+    "description": "Habilita el control de ventiladores en placas HUANANZHI X99. Modifica GRUB y configura el módulo nct6775.",
     "category": "Hardware Fix",
     "author": "Iván Masías",
-    "version": "2.0"
+    "version": "2.1"
 }
 
 def run():
@@ -28,65 +29,59 @@ def run():
         print("❌ Este parche solo es para placas HUANANZHI.")
         return False
 
-    print("✅ Placa HUANANZHI detectada. Iniciando port nativo del Fan Fix...")
+    print("✅ Placa HUANANZHI detectada. Iniciando optimización nativa...")
 
-    # 1. Instalar herramientas de sensores
-    print("📦 Instalando lm-sensors y fancontrol...")
+    # 1. Herramientas
+    print("📦 Asegurando herramientas térmicas (lm-sensors/fancontrol)...")
     subprocess.run("sudo apt-get install -y lm-sensors fancontrol", shell=True, capture_output=True)
 
-    # 2. Añadir parámetro al GRUB
-    print("📝 Verificando parámetros de GRUB...")
+    # 2. GRUB
+    print("📝 Revisando configuración de arranque (GRUB)...")
     grub_path = "/etc/default/grub"
     param = "acpi_enforce_resources=lax"
     
+    if not os.path.exists(grub_path):
+        print("❌ Error: No se encontró /etc/default/grub")
+        return False
+
     try:
         with open(grub_path, "r") as f:
             content = f.read()
         
         if param not in content:
-            print(f"➕ Añadiendo '{param}' al GRUB...")
-            # Usamos una aproximación segura para insertar el parámetro
-            new_content = ""
-            for line in content.split("\n"):
+            print(f"➕ Agregando '{param}' al GRUB...")
+            new_lines = []
+            for line in content.splitlines():
                 if line.startswith("GRUB_CMDLINE_LINUX_DEFAULT="):
                     if '"' in line:
-                        parts = line.split('"')
-                        # Insertar antes de las últimas comillas
-                        line = f'{parts[0]}"{parts[1].strip()} {param} "{parts[2]}'
+                        line = line.replace('"', f' {param} "', 1) if param not in line else line
+                        # Limpieza de espacios dobles
+                        line = line.replace('  ', ' ')
                     elif "'" in line:
-                        parts = line.split("'")
-                        line = f"{parts[0]}'{parts[1].strip()} {param} '{parts[2]}"
-                new_content += line + "\n"
+                        line = line.replace("'", f" {param} ", 1) if param not in line else line
+                new_lines.append(line)
             
-            with open("/tmp/grub_huananzhi", "w") as f:
-                f.write(new_content)
+            with open("/tmp/grub_zeus", "w") as f:
+                f.write("\n".join(new_lines))
             
-            subprocess.run("sudo mv /tmp/grub_huananzhi /etc/default/grub", shell=True)
-            print("🔄 Actualizando GRUB (update-grub)...")
+            subprocess.run("sudo mv /tmp/grub_zeus /etc/default/grub", shell=True)
+            print("🔄 Ejecutando update-grub...")
             subprocess.run("sudo update-grub", shell=True, capture_output=True)
             print("✅ GRUB actualizado. REINICIO REQUERIDO.")
         else:
-            print("✅ El parámetro de GRUB ya existe.")
+            print("✅ El parámetro lax ya está presente en GRUB.")
     except Exception as e:
-        print(f"❌ Error al modificar GRUB: {e}")
+        print(f"❌ Error modificando GRUB: {e}")
 
-    # 3. Configurar carga del módulo nct6775
-    print("⚙️ Configurando carga automática del módulo nct6775...")
-    
-    conf_load = "/etc/modules-load.d/huananzhi-fan.conf"
-    conf_opts = "/etc/modprobe.d/huananzhi-fan.conf"
-    
+    # 3. Kernel Modules
+    print("⚙️ Configurando carga de módulo nct6775...")
     try:
-        # Carga del módulo
-        subprocess.run(f"echo 'nct6775' | sudo tee {conf_load}", shell=True, capture_output=True)
-        # Opciones del módulo (usando 0xd420 como en el script original de easyway)
-        subprocess.run(f"echo 'options nct6775 force_id=0xd420' | sudo tee {conf_opts}", shell=True, capture_output=True)
-        print("✅ Módulos configurados.")
+        subprocess.run("echo 'nct6775' | sudo tee /etc/modules-load.d/zeus-fan.conf", shell=True, capture_output=True)
+        subprocess.run("echo 'options nct6775 force_id=0xd42b' | sudo tee /etc/modprobe.d/zeus-fan.conf", shell=True, capture_output=True)
+        print("✅ Configuración de módulos completada (ID: 0xd42b).")
     except Exception as e:
-        print(f"❌ Error al configurar módulos: {e}")
+        print(f"❌ Error en módulos: {e}")
 
-    print("\n--- ✨ PROCESO COMPLETADO ---")
-    print("🚀 Por favor, REINICIA el sistema para aplicar los cambios.")
-    print("💡 Después del reinicio, podrás configurar tus curvas con 'sudo pwmconfig'.")
-    
+    print("\n--- ✨ PROCESO ZEUS COMPLETADO ---")
+    print("🚀 REINICIA el sistema para que los ventiladores sean controlables.")
     return True

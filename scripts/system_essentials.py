@@ -1,35 +1,45 @@
 # Zeus Plugin: System Essentials (Ubuntu 24.04+ Edition)
 # ---------------------------------------------------------
 # Ported from legacy custom_ubuntu.sh by Iván Masías
-# Refined for modern Ubuntu versions (removing redundant tools)
 # ---------------------------------------------------------
 import subprocess
 import shutil
 
 MANIFEST = {
     "name": "Componentes de Sistema (Modernos)",
-    "description": "Instala PRELOAD para acelerar el inicio de aplicaciones y limpia el cache de paquetes de forma agresiva para liberar espacio.",
+    "description": "Instala PRELOAD para acelerar el inicio de aplicaciones y realiza mantenimiento de paquetes.",
     "category": "Rendimiento/Herramientas",
     "author": "Iván Masías",
-    "version": "1.2"
+    "version": "1.3"
 }
 
 def run():
     print("🚀 Optimizando aceleradores de sistema para Ubuntu 24.04+...")
     
-    # Preload sigue siendo muy útil para predecir el lanzamiento de apps
+    # Preload
     if not shutil.which("preload"):
-        print("📦 Instalando Preload (Aprendizaje de uso de apps)...")
-        subprocess.run("sudo apt-get update", shell=True)
-        subprocess.run("sudo apt-get install -y preload", shell=True)
+        print("📦 Instalando Preload (Acelerador de Apps)...")
+        try:
+            # Usamos update para asegurar que el repo está fresco
+            subprocess.run("sudo apt-get update", shell=True, capture_output=True)
+            res = subprocess.run("sudo apt-get install -y preload", shell=True, capture_output=True, text=True)
+            if res.returncode == 0:
+                print("  ✅ Preload instalado y configurado.")
+            else:
+                print(f"  ⚠️ No se pudo instalar preload: {res.stderr}")
+        except Exception as e:
+            print(f"  ❌ Error: {e}")
     else:
-        print("✅ preload ya está instalado y activo.")
+        print("✅ preload ya está presente en el sistema.")
 
-    # En 24.04, apt ya es suficientemente rápido. 
-    # Añadimos limpieza de cache como compensación.
-    print("🧹 Realizando limpieza profunda de paquetes (autoremove/autoclean)...")
-    subprocess.run("sudo apt-get autoremove -y", shell=True)
-    subprocess.run("sudo apt-get autoclean", shell=True)
+    # Mantenimiento Apt
+    print("🧹 Ejecutando rutinas de mantenimiento Apt...")
+    try:
+        subprocess.run("sudo apt-get autoremove -y", shell=True, capture_output=True)
+        subprocess.run("sudo apt-get autoclean", shell=True, capture_output=True)
+        print("  ✅ Mantenimiento de paquetes completado.")
+    except Exception as e:
+        print(f"  ⚠️ Error de mantenimiento: {e}")
         
-    print("✨ Sistema optimizado con herramientas modernas.")
+    print("✨ Sistema optimizado con herramientas Zeus.")
     return True
