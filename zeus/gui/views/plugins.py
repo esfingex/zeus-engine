@@ -48,10 +48,12 @@ def plugins_view(app_state):
                 ft.Text("Scripts y Extensiones", size=34, weight="bold"),
                 ft.Text("Librería modular de optimización nativa en Python", color="#8b949e", size=15),
             ], expand=True),
-            ft.IconButton(
+            ft.Container(
                 content=ft.Icon("autorenew", color="#58a6ff"),
                 tooltip="Recargar Plugins",
-                on_click=app_state.refresh_plugins
+                on_click=app_state.refresh_plugins,
+                padding=10,
+                border_radius=20,
             )
         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
         ft.Divider(height=40, color="#30363d"),
