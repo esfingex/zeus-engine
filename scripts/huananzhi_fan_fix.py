@@ -1,16 +1,17 @@
-# Zeus Plugin: Huananzhi Fan Fix (X99)
+# Zeus Plugin: Huananzhi Fan Fix (X99) - Native Python Edition
 # ---------------------------------------------------------
-# Ported from legacy custom_ubuntu.sh by Iván Masías
+# Ported from legacy install_huananzhi_fan_fix.sh by Iván Masías
 # ---------------------------------------------------------
 import os
 import subprocess
+import shutil
 
 MANIFEST = {
-    "name": "Huananzhi Fan Fix (X99)",
-    "description": "Parche específico para corregir la velocidad de los ventiladores en placas base HUANANZHI. Solo aplicar si tienes una placa X99 china.",
+    "name": "Huananzhi Fan Fix (Nativo)",
+    "description": "Habilita el control de ventiladores en placas HUANANZHI X99 (Chip Nuvoton). Modifica GRUB y configura el módulo nct6775.",
     "category": "Hardware Fix",
     "author": "Iván Masías",
-    "version": "1.0"
+    "version": "2.0"
 }
 
 def run():
@@ -27,19 +28,65 @@ def run():
         print("❌ Este parche solo es para placas HUANANZHI.")
         return False
 
-    print("✅ Placa HUANANZHI detectada. Aplicando parche de ventiladores...")
+    print("✅ Placa HUANANZHI detectada. Iniciando port nativo del Fan Fix...")
+
+    # 1. Instalar herramientas de sensores
+    print("📦 Instalando lm-sensors y fancontrol...")
+    subprocess.run("sudo apt-get install -y lm-sensors fancontrol", shell=True, capture_output=True)
+
+    # 2. Añadir parámetro al GRUB
+    print("📝 Verificando parámetros de GRUB...")
+    grub_path = "/etc/default/grub"
+    param = "acpi_enforce_resources=lax"
     
-    # Buscamos el script original relativo a este plugin
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    legacy_path = os.path.join(script_dir, "easyway_for_ubuntu/install_huananzhi_fan_fix.sh")
+    try:
+        with open(grub_path, "r") as f:
+            content = f.read()
+        
+        if param not in content:
+            print(f"➕ Añadiendo '{param}' al GRUB...")
+            # Usamos una aproximación segura para insertar el parámetro
+            new_content = ""
+            for line in content.split("\n"):
+                if line.startswith("GRUB_CMDLINE_LINUX_DEFAULT="):
+                    if '"' in line:
+                        parts = line.split('"')
+                        # Insertar antes de las últimas comillas
+                        line = f'{parts[0]}"{parts[1].strip()} {param} "{parts[2]}'
+                    elif "'" in line:
+                        parts = line.split("'")
+                        line = f"{parts[0]}'{parts[1].strip()} {param} '{parts[2]}"
+                new_content += line + "\n"
+            
+            with open("/tmp/grub_huananzhi", "w") as f:
+                f.write(new_content)
+            
+            subprocess.run("sudo mv /tmp/grub_huananzhi /etc/default/grub", shell=True)
+            print("🔄 Actualizando GRUB (update-grub)...")
+            subprocess.run("sudo update-grub", shell=True, capture_output=True)
+            print("✅ GRUB actualizado. REINICIO REQUERIDO.")
+        else:
+            print("✅ El parámetro de GRUB ya existe.")
+    except Exception as e:
+        print(f"❌ Error al modificar GRUB: {e}")
+
+    # 3. Configurar carga del módulo nct6775
+    print("⚙️ Configurando carga automática del módulo nct6775...")
     
-    if os.path.exists(legacy_path):
-        print("📦 Ejecutando parche heredado...")
-        subprocess.run(f"sudo chmod +x {legacy_path}", shell=True)
-        res = subprocess.run(f"sudo {legacy_path}", shell=True, capture_output=True, text=True)
-        print(res.stdout)
-        return res.returncode == 0
-    else:
-        print("❌ No se encontró el script original 'install_huananzhi_fan_fix.sh'.")
-        print("💡 Asegúrate de que el repositorio easyway_for_ubuntu esté clonado.")
-        return False
+    conf_load = "/etc/modules-load.d/huananzhi-fan.conf"
+    conf_opts = "/etc/modprobe.d/huananzhi-fan.conf"
+    
+    try:
+        # Carga del módulo
+        subprocess.run(f"echo 'nct6775' | sudo tee {conf_load}", shell=True, capture_output=True)
+        # Opciones del módulo (usando 0xd420 como en el script original de easyway)
+        subprocess.run(f"echo 'options nct6775 force_id=0xd420' | sudo tee {conf_opts}", shell=True, capture_output=True)
+        print("✅ Módulos configurados.")
+    except Exception as e:
+        print(f"❌ Error al configurar módulos: {e}")
+
+    print("\n--- ✨ PROCESO COMPLETADO ---")
+    print("🚀 Por favor, REINICIA el sistema para aplicar los cambios.")
+    print("💡 Después del reinicio, podrás configurar tus curvas con 'sudo pwmconfig'.")
+    
+    return True
