@@ -29,17 +29,18 @@ Zeus Engine es ahora **100% modular**. Puedes añadir tus propios scripts de opt
 
 - **Formato Nativo**: Soporte exclusivo para scripts `.py` con el fin de mantener un ecosistema limpio y rápido.
 - **Manifest Inteligente**: Cada plugin declara sus metadatos (Nombre, Descripción, Categoría), permitiendo que la GUI genere tarjetas de control ricas e informativas.
-- **Portabilidad Total**: El sistema utiliza rutas dinámicas; el proyecto es autogestionado y está listo para ser compartido como Open Source.
 
 ## 🛠️ Instalación y Uso
 
 1. **Clonar y Configurar**:
+
    ```bash
    cd zeus-engine
    ./setup_zeus.sh
    ```
 
 2. **Lanzar la App (Sin Sudo delante)**:
+
    ```bash
    ./run_zeus.sh
    ```
