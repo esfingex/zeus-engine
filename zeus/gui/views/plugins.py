@@ -49,7 +49,7 @@ def plugins_view(app_state):
                 ft.Text("Librería modular de optimización nativa en Python", color="#8b949e", size=15),
             ], expand=True),
             ft.IconButton(
-                content=ft.Icon(name="autorenew", color="#58a6ff"),
+                content=ft.Icon("autorenew", color="#58a6ff"),
                 tooltip="Recargar Plugins",
                 on_click=app_state.refresh_plugins
             )

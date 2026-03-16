@@ -89,7 +89,7 @@ def optimization_view(app_state):
                     ft.Text("📋 LOG NATIVO (UNIVERSAL)", size=11, color="#58a6ff", weight="bold"),
                     ft.Container(expand=True),
                     ft.IconButton(
-                        content=ft.Icon(name="delete_outline", size=16),
+                        content=ft.Icon("delete_outline", size=16),
                         on_click=lambda _: app_state.clear_logs()
                     )
                 ]),
