@@ -33,7 +33,8 @@ class CommandRunner:
             "GameMode": "Inactivo",
             "CPU Governor": "Balanceado",
             "Ajuste Hardware": "Pendiente",
-            "Control Térmico": "Inactivo"
+            "Control Térmico": "Inactivo",
+            "Network Optimization": "DEFAULT"
         }
         
         # CPU Governor
@@ -74,7 +75,23 @@ class CommandRunner:
                 s, out, err = ZeusCoreBase.run_command("systemctl is-active fancontrol")
                 statuses["Control Térmico"] = "ACTIVO ✅" if out.strip() == "active" else "DETENIDO"
             except: pass
-            
+
+        # Network Optimization (TCP low latency)
+        try:
+            tcp_ll_path = "/proc/sys/net/ipv4/tcp_low_latency"
+            if os.path.exists(tcp_ll_path):
+                with open(tcp_ll_path) as f:
+                    val = f.read().strip()
+                    statuses["Network Optimization"] = "ACTIVO ✅" if val == "1" else "DEFAULT"
+            tcp_fo_path = "/proc/sys/net/ipv4/tcp_fastopen"
+            if os.path.exists(tcp_fo_path):
+                with open(tcp_fo_path) as f:
+                    fo_val = f.read().strip()
+                    if fo_val == "3" and statuses["Network Optimization"] == "ACTIVO ✅":
+                        statuses["Network Optimization"] = "OPTIMIZADO ✅"
+        except Exception:
+            pass
+
         return statuses
 
     def run_optimization(self, action):

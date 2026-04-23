@@ -1,5 +1,6 @@
 import flet as ft
 import os
+import subprocess
 
 def hardware_view(app_state):
     """Vista detallada de Hardware."""
@@ -44,7 +45,7 @@ def hardware_view(app_state):
                 hw_row("Tarjeta Gráfica", hw_info.get_gpu()),
                 hw_row("Driver NVIDIA", hw_info.get_nvidia_version()) if hw_info.get_gpu() == "NVIDIA" else ft.Container(),
                 hw_row("Distribución", hw_info.get_distro()),
-                hw_row("Kernel", os.popen("uname -r").read().strip()),
+                hw_row("Kernel", subprocess.check_output("uname -r", shell=True).decode().strip()),
             ]),
             padding=25, bgcolor="#161b22", border_radius=15, border=ft.border.all(1, "#30363d")
         ),

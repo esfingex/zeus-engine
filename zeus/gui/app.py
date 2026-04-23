@@ -4,8 +4,8 @@ from zeus.core.runner import CommandRunner
 from zeus.core.plugins import PluginManager
 import os
 import time
-import random
 import threading
+import psutil
 
 # Importamos las vistas
 from zeus.gui.views.dashboard import dashboard_view
@@ -34,6 +34,8 @@ class ZeusApp:
         # Shared UI State
         self.cpu_usage = ft.Text("0%", size=26, weight="bold", color="#58a6ff")
         self.ram_usage = ft.Text("0%", size=26, weight="bold", color="#58a6ff")
+        self.cpu_bar = ft.ProgressBar(width=200, color="#58a6ff", bgcolor="#30363d", value=0)
+        self.ram_bar = ft.ProgressBar(width=200, color="#3fb950", bgcolor="#30363d", value=0)
         self.status_msg = ft.Text("🟢 Zeus Shield Activo", size=14, color="#3fb950")
         self.zeus_mode_on = False
         self.zeus_master_btn = None # Referencia para el botón del dashboard
@@ -53,13 +55,22 @@ class ZeusApp:
         threading.Thread(target=self.update_stats, daemon=True).start()
 
     def update_stats(self):
+        # Primer llamado a cpu_percent siempre devuelve 0.0, lo descartamos
+        psutil.cpu_percent(interval=None)
         while not self.stop_monitor:
             try:
-                self.cpu_usage.value = f"{random.randint(4, 12)}%"
-                self.ram_usage.value = f"{random.randint(18, 32)}%"
+                cpu = psutil.cpu_percent(interval=1)
+                ram = psutil.virtual_memory().percent
+                self.cpu_usage.value = f"{cpu:.1f}%"
+                self.ram_usage.value = f"{ram:.1f}%"
+                self.cpu_bar.value = cpu / 100
+                self.ram_bar.value = ram / 100
+                # Color dinámico según carga
+                self.cpu_bar.color = "#ff7b72" if cpu > 80 else ("#e3b341" if cpu > 50 else "#58a6ff")
+                self.ram_bar.color = "#ff7b72" if ram > 80 else ("#e3b341" if ram > 50 else "#3fb950")
                 self.page.update()
-                time.sleep(2)
-            except:
+                time.sleep(1)
+            except Exception:
                 break
 
     def navigate(self, view_name):
@@ -126,25 +137,34 @@ class ZeusApp:
         self.page.update()
 
     def run_opt_action(self, action_id):
+        """Lanza la optimización en un hilo separado para no bloquear la UI."""
         self.add_log(f"Iniciando: {action_id}", "cmd")
         self.status_msg.value = f"⏳ Ejecutando {action_id}..."
         self.page.update()
-        
-        res = self.runner.run_optimization(action_id)
-        
-        if "log" in res:
-            for line in res["log"].split("\n"):
-                if line.strip(): self.add_log(line)
+        threading.Thread(target=self._exec_opt_action, args=(action_id,), daemon=True).start()
 
-        if res["success"]:
-            self.add_log(f"Éxito: {action_id}", "success")
-            self.status_msg.value = f"✅ {action_id} completado"
-            self.status_msg.color = "#3fb950"
-        else:
-            self.add_log(f"Fallo: {action_id}", "error")
-            self.status_msg.value = "⚠️ Error. Revisa el log."
+    def _exec_opt_action(self, action_id):
+        try:
+            res = self.runner.run_optimization(action_id)
+
+            if "log" in res:
+                for line in res["log"].split("\n"):
+                    if line.strip():
+                        self.add_log(line)
+
+            if res["success"]:
+                self.add_log(f"Éxito: {action_id}", "success")
+                self.status_msg.value = f"✅ {action_id} completado"
+                self.status_msg.color = "#3fb950"
+            else:
+                self.add_log(f"Fallo: {action_id}", "error")
+                self.status_msg.value = "⚠️ Error. Revisa el log."
+                self.status_msg.color = "#ff7b72"
+        except Exception as e:
+            self.add_log(f"Error crítico en {action_id}: {str(e)}", "error")
+            self.status_msg.value = "⚠️ Error crítico."
             self.status_msg.color = "#ff7b72"
-        
+
         self.page.update()
 
     def run_external_script(self, filename):

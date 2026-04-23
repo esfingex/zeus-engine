@@ -3,12 +3,12 @@ import flet as ft
 def dashboard_view(app_state):
     """Vista principal del Dashboard."""
     
-    def metric_card(title, value_ctrl):
+    def metric_card(title, value_ctrl, bar_ctrl):
         return ft.Container(
             content=ft.Column([
                 ft.Text(title, size=12, color="#8b949e", weight="bold"),
                 value_ctrl,
-                ft.ProgressBar(width=200, color="#58a6ff", bgcolor="#30363d", value=0.1)
+                bar_ctrl
             ], spacing=10),
             padding=25, bgcolor="#161b22", border_radius=15, border=ft.border.all(1, "#30363d"), expand=True
         )
@@ -41,8 +41,8 @@ def dashboard_view(app_state):
 
         # Stats Section
         ft.Row([
-            metric_card("CPU PERFORMANCE", app_state.cpu_usage),
-            metric_card("RAM STABILITY", app_state.ram_usage),
+            metric_card("CPU PERFORMANCE", app_state.cpu_usage, app_state.cpu_bar),
+            metric_card("RAM STABILITY", app_state.ram_usage, app_state.ram_bar),
         ], spacing=25),
 
         ft.Container(height=30),
